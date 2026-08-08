@@ -1,11 +1,13 @@
 /*
  * demo_wave — the worked example for standalone rgbx extension repos.
  *
- * A sine-ish wave rolls across the panel, its crest color set by a COLOR
+ * A sine wave rolls across the panel, its crest color set by a COLOR
  * parameter and its speed by a UINT32 parameter; the wave amplitude reacts
  * to audio energy (band 0), and a beat on any band fires a full-column
- * flash at the crest. Integer math throughout — no libm on-device (the
- * build gate enforces this).
+ * flash at the crest. Uses real sinf(): firmware v3.1.0+ exports
+ * single-precision libm to extensions (the SDK's build gate verifies the
+ * exact callable surface — double-precision math is still rejected, so
+ * keep float literals f-suffixed).
  *
  * Built from the rgbx-extension-template; registered in the rgb-sunglasses
  * repo's extensions/registry.json as the registry's seed entry.
@@ -13,12 +15,15 @@
 
 #include <rgbx/rgbx_api.h>
 #include <zephyr/llext/symbol.h>
+#include <math.h>
 
 #define WIDTH 40u
 #define HEIGHT 12u
 
 #define P_SPEED 0u
 #define P_COLOR 1u
+
+#define TAU 6.2831853f
 
 struct rgbx_inputs rgbx_inputs;
 uint8_t rgbx_framebuffer[WIDTH * HEIGHT * 3u];
@@ -39,12 +44,6 @@ const struct rgbx_manifest rgbx_manifest = {
 };
 
 static uint32_t phase_ms;
-
-/* Triangle-wave sine stand-in: period 256, output 0..255. */
-static uint8_t wave8(uint8_t x)
-{
-	return (x < 128u) ? (uint8_t)(x * 2u) : (uint8_t)(255u - (x - 128u) * 2u);
-}
 
 static void set_px(uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b)
 {
@@ -82,19 +81,21 @@ void rgbx_tick(void)
 	if (energy > 1.0f) {
 		energy = 1.0f;
 	}
-	const uint32_t amp = 2u + (uint32_t)(energy * (float)(HEIGHT / 2u - 1u));
+	const float amp = 2.0f + energy * ((float)(HEIGHT / 2u) - 1.0f);
 
 	uint32_t beat = 0;
 	for (uint32_t band = 0; band < RGBX_AUDIO_NUM_BANDS; band++) {
 		beat |= rgbx_inputs.audio_beat[band];
 	}
 
+	const float t = (float)phase_ms * 0.001f;
 	const uint32_t crest_x = (phase_ms / 40u) % WIDTH;
 	for (uint32_t x = 0; x < WIDTH; x++) {
-		const uint8_t p = (uint8_t)(((x * 256u / WIDTH) + phase_ms / 8u) & 0xFFu);
+		const float fx = (float)x / (float)WIDTH;
+		/* One real sine across the panel, rolling with time. */
+		const float off = sinf(fx * TAU + t * TAU * 0.25f) * amp;
 		const uint32_t mid = HEIGHT / 2u;
-		const int32_t off = (int32_t)(wave8(p) * amp / 255u) - (int32_t)(amp / 2u);
-		const uint32_t y = (uint32_t)((int32_t)mid + off);
+		const uint32_t y = (uint32_t)((int32_t)mid + (int32_t)off);
 
 		/* Crest pixel at full scale; one dimmer pixel above and below
 		 * for body. Full-scale rendering matters: the firmware scales
