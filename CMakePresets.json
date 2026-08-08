@@ -1,0 +1,22 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "arm",
+      "displayName": "Device .llext (ARM)",
+      "binaryDir": "${sourceDir}/build/arm",
+      "cacheVariables": { "RGBX_TARGET": "arm" }
+    },
+    {
+      "name": "wasm",
+      "displayName": "Simulator .wasm",
+      "binaryDir": "${sourceDir}/build/wasm",
+      "cacheVariables": { "RGBX_TARGET": "wasm" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "arm", "configurePreset": "arm" },
+    { "name": "wasm", "configurePreset": "wasm" }
+  ]
+}

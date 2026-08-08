@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Both pinned toolchains live under this dir; they only change when
+      # the fw-release pin bumps, so key the cache on the pin file.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/rgb-sunglasses
+          key: toolchains-${{ hashFiles('cmake/fw-release.cmake') }}
+
+      - name: Build both targets (strict toolchain)
+        run: ./build.sh -DRGBX_STRICT_TOOLCHAIN=ON
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension
+          path: |
+            build/arm/*.llext
+            build/wasm/*.wasm
