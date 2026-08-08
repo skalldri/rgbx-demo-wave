@@ -28,7 +28,7 @@ else()
     set(CMAKE_TOOLCHAIN_FILE "${RGBX_SDK_DIR}/cmake/toolchains/wasm.cmake")
 endif()
 
-project(my_extension C CXX)
+project(demo_wave C CXX)
 
 include("${RGBX_SDK_DIR}/cmake/rgbx-sdk-config.cmake")
 
