@@ -25,6 +25,24 @@
 
 #define TAU 6.2831853f
 
+/* Phase-accumulator wrap period, in ms.
+ *
+ * phase_ms has two consumers with different periods, and the wrap has to be
+ * seamless for both: the sine rolls at TAU*0.25 rad/s (period 4000 ms) and
+ * crest_x steps every 40 ms across WIDTH columns (period 1600 ms). 8000 ms is
+ * their lcm, so both resume exactly where they left off -- no rounding error.
+ *
+ * Bounding it is a performance requirement, not housekeeping. picolibc's sinf()
+ * uses a cheap Cody-Waite argument reduction only while |x| <= 2^7*(pi/2) =
+ * 201.06 (newlib/libm/math/sf_rem_pio2.c); past that it enters
+ * __kernel_rem_pio2f, a multi-precision Payne-Hanek reduction that costs several
+ * times more and keeps growing with the argument's exponent. A free-running
+ * accumulator would cross 201 about 128 s after activation and quietly get
+ * slower from then on -- the bug that hit the plasma extension
+ * (skalldri/rgb-sunglasses#304). The largest argument here is now 18.7.
+ */
+#define PHASE_PERIOD_MS 8000u
+
 struct rgbx_inputs rgbx_inputs;
 uint8_t rgbx_framebuffer[WIDTH * HEIGHT * 3u];
 uint8_t rgbx_good_moment;
@@ -62,7 +80,10 @@ void rgbx_init(void)
 
 void rgbx_tick(void)
 {
-	phase_ms += rgbx_inputs.dt_ms * rgbx_inputs.params[P_SPEED] / 50u;
+	/* No overflow: phase_ms < PHASE_PERIOD_MS and the increment is at most
+	 * UINT32_MAX/50, so the sum stays well under 2^32. */
+	phase_ms = (phase_ms + rgbx_inputs.dt_ms * rgbx_inputs.params[P_SPEED] / 50u) %
+		   PHASE_PERIOD_MS;
 
 	for (uint32_t i = 0; i < sizeof(rgbx_framebuffer); i++) {
 		rgbx_framebuffer[i] = 0;
