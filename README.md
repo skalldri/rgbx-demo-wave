@@ -21,6 +21,13 @@ produces `build/arm/demo_wave.llext` (device) and `build/wasm/demo_wave.wasm`
 <https://rgb-sunglasses.autom8ed.com/sim/> to watch it run — try the
 `metronome-120` audio scenario to see the beat response.
 
+Prerequisites: bash, cmake ≥ 3.21, Node.js ≥ 20, curl, tar. `build.sh` checks the
+Node version before it configures anything — the SDK's wasm gate
+(`check-wasm.mjs`) needs ≥ 20, and an older one fails the wasm link with a bare
+`SyntaxError` from inside the SDK. If you upgrade Node after a build, re-run
+`./build.sh -URGBX_NODE`: CMake cached the old interpreter's path at configure
+time and keeps using it otherwise.
+
 ## How this repo gets onto real devices
 
 It's listed in the main repo's extension registry pinned at a specific
