@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Build both targets: the device .llext (build/arm/) and the simulator .wasm
-# (build/wasm/). Extra arguments pass through to both cmake configures, e.g.:
+# Build all three targets: the device .llext (build/arm/), the simulator .wasm
+# (build/wasm/), and the device RGBX v2 package (build/rgbx-v2/). Extra
+# arguments pass through to every cmake configure, e.g.:
 #
 #   ./build.sh                              # normal build
 #   ./build.sh -DRGBX_STRICT_TOOLCHAIN=ON   # CI: pin deviations are fatal
@@ -21,8 +22,9 @@ cd "$(dirname "$0")"
 # Check the interpreter the build will actually USE: the SDK's
 # find_program(RGBX_NODE node) caches its result, so an already-configured
 # tree keeps running whatever node was first on PATH when it was configured,
-# even after a newer one is installed. Only the wasm tree caches it (the SDK's
-# find_program is inside its `if(RGBX_TARGET STREQUAL "wasm")` block).
+# even after a newer one is installed. The wasm and rgbx-v2 trees both cache it
+# (the SDK's find_program covers both of those targets); this looks at the wasm
+# one, which is the first of the two this script configures.
 wasm_cache="build/wasm/CMakeCache.txt"
 for arg in "$@"; do
     # This invocation drops or overrides the cache entry, so PATH decides.
@@ -63,11 +65,11 @@ if [ "$node_major" -lt 20 ]; then
     exit 1
 fi
 
-for preset in arm wasm; do
+for preset in arm wasm rgbx-v2; do
     cmake --preset "$preset" "$@"
     cmake --build --preset "$preset"
 done
 
 echo
 echo "Artifacts:"
-ls build/arm/*.llext build/wasm/*.wasm
+ls build/arm/*.llext build/wasm/*.wasm build/rgbx-v2/*.rgbx

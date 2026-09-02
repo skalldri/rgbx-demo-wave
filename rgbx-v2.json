@@ -1,0 +1,19 @@
+{
+  "extensionId": "demo_wave",
+  "displayName": "Demo Wave",
+  "version": [1, 0, 0],
+  "rgbxAbi": 2,
+  "minimumFirmwareAbi": 1,
+  "geometry": [40, 12],
+  "capabilities": ["audio"],
+  "memoryMaxBytes": 0,
+  "budgetClass": 0,
+  "sourceLanguage": "c",
+  "compilerId": "wasi-sdk",
+  "compilerVersion": "33.0",
+  "sourceFile": "src/main_v2.c",
+  "parameters": [
+    { "name": "Speed", "type": "uint32", "default": 50 },
+    { "name": "Color", "type": "color", "default": 2162528 }
+  ]
+}

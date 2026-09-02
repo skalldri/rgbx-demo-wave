@@ -13,10 +13,17 @@
       "displayName": "Simulator .wasm",
       "binaryDir": "${sourceDir}/build/wasm",
       "cacheVariables": { "RGBX_TARGET": "wasm" }
+    },
+    {
+      "name": "rgbx-v2",
+      "displayName": "Device RGBX v2 package (.rgbx)",
+      "binaryDir": "${sourceDir}/build/rgbx-v2",
+      "cacheVariables": { "RGBX_TARGET": "rgbx-v2" }
     }
   ],
   "buildPresets": [
     { "name": "arm", "configurePreset": "arm" },
-    { "name": "wasm", "configurePreset": "wasm" }
+    { "name": "wasm", "configurePreset": "wasm" },
+    { "name": "rgbx-v2", "configurePreset": "rgbx-v2" }
   ]
 }
