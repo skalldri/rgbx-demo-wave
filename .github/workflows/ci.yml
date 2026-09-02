@@ -22,8 +22,53 @@ jobs:
           path: ~/.cache/rgb-sunglasses
           key: toolchains-${{ hashFiles('cmake/fw-release.cmake') }}
 
-      - name: Build both targets (strict toolchain)
+      # All three targets. The rgbx-v2 preset runs the SDK's post-link pass,
+      # its structural gate and tick oracle, the package builder, and this
+      # repo's known-answer parity tests inside the build, so a module the
+      # firmware would refuse, or one that no longer paints Demo Wave, fails
+      # this step rather than reaching a device.
+      - name: Build every target (strict toolchain)
         run: ./build.sh -DRGBX_STRICT_TOOLCHAIN=ON
+
+      # The .rgbx container is supposed to be a function of the source
+      # revision and the SDK pin, and of nothing else. Build it a second time
+      # in a differently named directory and require identical bytes: same
+      # binaryDir would compare two builds that could both embed the same
+      # absolute path and still look reproducible. The SDK and the toolchains
+      # are already resolved by then, so this costs a compile, not a download.
+      - name: Check the RGBX package is reproducible
+        run: |
+          cmake -S . -B build/rgbx-v2-repro -DRGBX_TARGET=rgbx-v2 -DRGBX_STRICT_TOOLCHAIN=ON
+          cmake --build build/rgbx-v2-repro
+          cmp build/rgbx-v2/demo_wave.rgbx build/rgbx-v2-repro/demo_wave.rgbx
+          cmp build/rgbx-v2/demo_wave.wasm build/rgbx-v2-repro/demo_wave.wasm
+          sha256sum build/rgbx-v2/demo_wave.wasm build/rgbx-v2/demo_wave.rgbx
+
+      # Two builds of one revision agree with each other whatever they built,
+      # so also assert the bytes this repository is supposed to produce. The
+      # module digest is the whole claim of the RGBX v2 port: same source plus
+      # same SDK pin has to mean the same animation on every device, and it
+      # comes out the same from the pinned wasi-sdk on Linux here and on macOS
+      # locally.
+      #
+      # The two digests move for different reasons, so read a failure
+      # accordingly. demo_wave.wasm is compiled, post-linked and gated before
+      # the packager ever reads rgbx-v2.json, so only src/main_v2.c or the SDK
+      # pin can move it, and moving it changes the animation on every device
+      # that ships this effect. demo_wave.rgbx carries the manifest as well,
+      # and the manifest records the SHA-256 of the translation unit, so a
+      # version bump or even a comment-only source edit moves that one on its
+      # own while the module stays identical; when it does, this line is
+      # updated in the same commit, which is the point at which the change
+      # gets stated rather than slipping through.
+      #
+      # Only the v2 artifacts are pinned here. The .llext and simulator .wasm
+      # come from toolchains whose cross-OS byte-identity this repository has
+      # not established, and neither is what the port claim rests on.
+      - name: Check the RGBX artifacts match their recorded digests
+        run: |
+          echo "72bd42a5d2721f358770a7d1b99f3274c1ed978769a5f85f069e43118b5bbc56  build/rgbx-v2/demo_wave.wasm" | sha256sum -c
+          echo "54f49703bed403e735fd732703aac5a7e2a78bad3ce97ab26bfbac63ffca7cce  build/rgbx-v2/demo_wave.rgbx" | sha256sum -c
 
       - uses: actions/upload-artifact@v4
         with:
@@ -31,3 +76,4 @@ jobs:
           path: |
             build/arm/*.llext
             build/wasm/*.wasm
+            build/rgbx-v2/*.rgbx
